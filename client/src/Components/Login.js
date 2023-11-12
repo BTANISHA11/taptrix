@@ -10,8 +10,9 @@ function Login() {
   const [data, setData] = useState({ name: "", email: "", password: "" });
   const [loading, setLoading] = useState(false);
 
-  const [logInStatus, setLogInStatus] = React.useState("");
-  const [signInStatus, setSignInStatus] = React.useState("");
+  const [logInStatus, setLogInStatus] = useState("");
+  const [signInStatus, setSignInStatus] = useState("");
+  const [errorStatus, setErrorStatus] = useState(""); // New state for errors
 
   const navigate = useNavigate();
 
@@ -19,7 +20,7 @@ function Login() {
     setData({ ...data, [e.target.name]: e.target.value });
   };
 
-  const loginHandler = async (e) => {
+  const loginHandler = async () => {
     setLoading(true);
     console.log(data);
     try {
@@ -40,12 +41,13 @@ function Login() {
       localStorage.setItem("userData", JSON.stringify(response));
       navigate("/app/welcome");
     } catch (error) {
-      setLogInStatus({
+      setErrorStatus({
         msg: "Invalid User name or Password",
         key: Math.random(),
       });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const signUpHandler = async () => {
@@ -56,35 +58,50 @@ function Login() {
           "Content-type": "application/json",
         },
       };
-
+  
       const response = await axios.post(
         "http://localhost:8080/user/register/",
         data,
         config
       );
-      console.log(response);
-      setSignInStatus({ msg: "Success", key: Math.random() });
-      navigate("/app/welcome");
-      localStorage.setItem("userData", JSON.stringify(response));
-      setLoading(false);
+  
+      console.log("SignUp Response:", response);
+  
+      if (response && response.data && response.data.status) {
+        setSignInStatus({ msg: "Success", key: Math.random() });
+        navigate("/app/welcome");
+        localStorage.setItem("userData", JSON.stringify(response));
+      } else {
+        console.error("Invalid response structure:", response);
+        setErrorStatus({
+          msg: "Unexpected response format. Please try again.",
+          key: Math.random(),
+        });
+      }
     } catch (error) {
-      console.log(error);
-      if (error.response.status === 405) {
-        setLogInStatus({
-          msg: "User with this email ID already Exists",
+      console.error("SignUp Error:", error);
+  
+      if (error.response) {
+        console.error("Error Response Data:", error.response.data);
+      }
+  
+      if (error.code === "ECONNABORTED") {
+        setErrorStatus({
+          msg: "The request timed out. Please try again.",
+          key: Math.random(),
+        });
+      } else {
+        setErrorStatus({
+          msg: "An unexpected error occurred. Please try again.",
           key: Math.random(),
         });
       }
-      if (error.response.status === 406) {
-        setLogInStatus({
-          msg: "User Name already Taken, Please take another one",
-          key: Math.random(),
-        });
-      }
+    } finally {
       setLoading(false);
     }
   };
-
+  
+  
   return (
     <>
       <Backdrop
@@ -108,8 +125,7 @@ function Login() {
               color="secondary"
               name="name"
               onKeyDown={(event) => {
-                if (event.code == "Enter") {
-                  // console.log(event);
+                if (event.code === "Enter") {
                   loginHandler();
                 }
               }}
@@ -123,8 +139,7 @@ function Login() {
               color="secondary"
               name="password"
               onKeyDown={(event) => {
-                if (event.code == "Enter") {
-                  // console.log(event);
+                if (event.code === "Enter") {
                   loginHandler();
                 }
               }}
@@ -133,7 +148,6 @@ function Login() {
               variant="outlined"
               color="secondary"
               onClick={loginHandler}
-              isLoading
             >
               Login
             </Button>
@@ -148,9 +162,6 @@ function Login() {
                 Sign Up
               </span>
             </p>
-            {logInStatus ? (
-              <Toaster key={logInStatus.key} message={logInStatus.msg} />
-            ) : null}
           </div>
         )}
         {!showlogin && (
@@ -163,10 +174,8 @@ function Login() {
               variant="outlined"
               color="secondary"
               name="name"
-              helperText=""
               onKeyDown={(event) => {
-                if (event.code == "Enter") {
-                  // console.log(event);
+                if (event.code === "Enter") {
                   signUpHandler();
                 }
               }}
@@ -179,8 +188,7 @@ function Login() {
               color="secondary"
               name="email"
               onKeyDown={(event) => {
-                if (event.code == "Enter") {
-                  // console.log(event);
+                if (event.code === "Enter") {
                   signUpHandler();
                 }
               }}
@@ -194,8 +202,7 @@ function Login() {
               color="secondary"
               name="password"
               onKeyDown={(event) => {
-                if (event.code == "Enter") {
-                  // console.log(event);
+                if (event.code === "Enter") {
                   signUpHandler();
                 }
               }}
@@ -218,11 +225,17 @@ function Login() {
                 Log in
               </span>
             </p>
-            {signInStatus ? (
-              <Toaster key={signInStatus.key} message={signInStatus.msg} />
-            ) : null}
           </div>
         )}
+        {logInStatus ? (
+          <Toaster key={logInStatus.key} message={logInStatus.msg} />
+        ) : null}
+        {signInStatus ? (
+          <Toaster key={signInStatus.key} message={signInStatus.msg} />
+        ) : null}
+        {errorStatus ? (
+          <Toaster key={errorStatus.key} message={errorStatus.msg} />
+        ) : null}
       </div>
     </>
   );
