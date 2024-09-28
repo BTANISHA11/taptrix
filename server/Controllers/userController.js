@@ -1,5 +1,5 @@
 const generateToken = require("../Config/generateToken");
-const UserModel = require("../modals/userModel");
+const UserModel = require("../models/userModel");
 const expressAsyncHandler = require("express-async-handler");
 // Login
 const loginController = expressAsyncHandler(async (req, res) => {
